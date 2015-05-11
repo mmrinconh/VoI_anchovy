@@ -20,7 +20,7 @@ shinyUI(fluidPage(
     sidebarPanel(
       # Simple integer interval
       sliderInput("rho", "rho:", 
-                  min=0, max=10, value=4.5,  step= 0.1),#,
+                  min=0, max=10, value=0.4,  step= 0.1),#,
       
       #Decimal interval with step value
        sliderInput("sd_Disch", "sd Disch:", 
@@ -28,7 +28,7 @@ shinyUI(fluidPage(
       
       # Specification of range within an interval
       sliderInput("FM", "Fishing mortality:",
-                   min = 0.02, max = 0.06, value = 0.025, step=0.005),
+                   min = 0.02, max = 0.06, value = 0.04, step=0.005),
       fluidRow(  column(12,
                                              plotOutput("plot1"),
                                              plotOutput("plot2")))
