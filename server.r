@@ -601,7 +601,7 @@ TrigLevel<-matrix(NA,ncol=sims[3],nrow=30)
 
 #CREATE MATRIX OBJECT TO STORE VALUES
 
-
+AveRev<-median(AnchYield[17:46,]*AnchWeightedPrice[17:46,]) 
 #!EXTRACT ITERATIONS FOR 30 YEARS, FROM year =71 TO 100
 for( i in 1:sims[3])
 {
@@ -609,7 +609,7 @@ for( i in 1:sims[3])
   {
     j<-y+17
     
-    AveRev<-mean(AnchYield[(j-Num_Y_Harvest):(j-1),i]*AnchWeightedPrice[(j-Num_Y_Price):(j-1),i])  
+    #AveRev<-mean(AnchYield[(j-Num_Y_Harvest):(j-1),i]*AnchWeightedPrice[(j-Num_Y_Price):(j-1),i])  
     Trigger<-Revenue_CL* AveRev
     TrigLevel[y,i]<-Trigger
     if (AnchYield[j,i]*AnchWeightedPrice[j,i]<Trigger)
@@ -752,7 +752,7 @@ for( i in 1:sims[3])
   {
     j<-y+17
     
-    AveRev<-mean(AnchYield[(j-Num_Y_Harvest):(j-1),i]*AnchWeightedPrice[(j-Num_Y_Price):(j-1),i])  
+    #AveRev<-mean(AnchYield[(j-Num_Y_Harvest):(j-1),i]*AnchWeightedPrice[(j-Num_Y_Price):(j-1),i])  
     Trigger<-Revenue_CL* AveRev
     TrigLevel[y,i]<-Trigger
     if (AnchYield[j,i]*AnchWeightedPrice[j,i]<Trigger)
