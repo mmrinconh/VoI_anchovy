@@ -1,948 +1,555 @@
 
 
 library(shiny)
+library(plyr)
+load("CondicionInicial.RData")
+Simulacion<-100#200;
 
-# Define server logic for slider examples
-M<-0.075
-have1=9.812671284*225*10
-#avesurv should be 1/have1
-AS<-1/(have1) #1/(have1*0.973) 
-#!Carrying capacity in eggs (based Xavier paper)
-CC<-2.86*10^12
-WindUp<-2
-Wind<-runif(10000,2.25,15)
-slope<-0.013
-logD_mean<-4.6
-ages<-c(0,10)
-ages<-c(ages[],length(ages[1]:ages[2]))
-months<-c(0,11)
-months<-c(months[],length(months[1]:months[2]))
-years<-c(0,48)
-years<-c(years[],length(years[2]:years[1]))
-sims<-c(1,200)
-sims<-c(sims[],length(sims[2]:sims[1]))
-Rel_F<-matrix(1,1000,49)
-iniQuant  <- array(NA, dim = c(ages[3],months[3],years[3],sims[3]))
-Months<-c("May","June","July","Aug","Sept","Oct", "Nov","Dec","Jan","Feb","March","Apr")
-ageX<-c(0:10)
-dimnames(iniQuant)<-list(ageClass=ageX, month=Months,year=years[1
-                                                                ]:years[2],iter=sims[1]:sims[2])
+Anyos<-30;
 
-#Stats
-Catch<-array(NA, dim = c(months[3]*years[3],sims[3]))
-Catch[]<-0
-CatchAnnual<-array(NA, dim = c(years[3],sims[3]))
-RecruitsAnnual<-array(NA, dim = c(years[3],sims[3]))
-CatchAnnual[]<-0
-RecruitsAnnual[]<-0
-Trick<-iniQuant 
-Trick[]<-0
-for(a in 2:5)
-{
-  Trick[2:11,a,1,1]<-Trick[1:10,a-1,1,1]+1
-}
-for(a in 6:12)
-{
-  Trick[1:10,a,1,1]<-Trick[1:10,a-1,1,1]+1
-}
-Trick[2:11,"May",2,1]<-Trick[1:10,"Apr",1,1]+1
-for(a in 2:5)
-{
-  Trick[2:11,a,2,1]<-Trick[1:10,a-1,2,1]+1
-}
-for(a in 6:12)
-{
-  Trick[1:10,a,2,1]<-Trick[1:10,a-1,2,1]+1
-}
-Trick[7:11,"May",2,1]<-Trick[6:10,"Apr",2,1]+1
-Trick[8:11,"June",2,1]<-Trick[7:10,"May",2,1]+1
-Trick[9:11,"July",2,1]<-Trick[8:10,"June",2,1]+1
-Trick[10:11,"Aug",2,1]<-Trick[9:10,"July",2,1]+1
-Trick[11:11,"Sept",2,1]<-Trick[10:10,"Aug",2,1]+1
-AgeStructure<-Trick[,,2,1]
-###############33AgeStructure
+perd<-c(0,1)
+PERD<-factor(perd)
 
-SpawnersAge<-AgeStructure
-SpawnersAge[SpawnersAge[]<10]<-0
-SpawnersAge[,6:12]<-0
-#####################3SpawnersAge
-SpawnersWeightAtAge<-SpawnersAge*1.50907-9.2221
-SpawnersWeightAtAge[SpawnersWeightAtAge[]<0]<-0
-########3SpawnersWeightAtAge
-#Number of eggs per one spawner at age
-#Growth rate assumed linear with 8.33 g/mo
-#Fecundity assumed to be 450 eggs/gram per female
-#Fecundity is assumed to be 225 eggs/gram because we assume females are 50% of population
-FecAge<-SpawnersWeightAtAge*225
-#Spawner Weight at age, assume the growth regression (Ignaci)
-#####FecAge
-#######sum(FecAge)
-#!Average fecundity per fish per spawning event
-###########sum(FecAge)/(10+9+8+7+6)
+#############################################################################################
 
-Anchovy<-iniQuant
-Anchovy[]<-0
-Anchovy[1,1:5,,]<-CC
+#############################################################################################
 
-Mx<-1
+#############################   PARAMETROS DEL MODELO BIOLOGICO     #########################
 
-y<-1
-for(a in 2:5)
-{
-  Anchovy[2:11,a,y,]<-Anchovy[1:10,a-1,y,]*exp(-Mx)
-}
-for(a in 6:12)
-{
-  Anchovy[1:10,a,y,]<-Anchovy[1:10,a-1,y,]*exp(-Mx)
-}
+#############################################################################################
 
-
-for (y in 2:5) {
-  Anchovy[2:11,"May",y,]<-Anchovy[1:10,"Apr",y-1,]*exp(-Mx)
-  for(a in 2:5)
-  {
-    Anchovy[2:11,a,y,]<-Anchovy[1:10,a-1,y,]*exp(-Mx)
-  }
-  for(a in 6:12)
-  {
-    Anchovy[1:10,a,y,]<-Anchovy[1:10,a-1,y,]*exp(-Mx)
-  }
-  
-}
-#!initial population in year five
-Anchovy[,,4,1]
-
-
-##################################################################################
-#Period of interest
-t0<-12*17
-t1<-12*years[3]
-y0<-18
-y1<-years[3]
-
-#!holding information
-AnchovyHCR<-Anchovy
-AnchovyEHCR<-Anchovy
-
-CatchHCR<-array(NA, dim = c(months[3]*years[3],sims[3]))
-CatchHCR[]<-0
-CatchAnnualHCR<-array(NA, dim = c(years[3],sims[3]))
-AnchWeightedPrice<-array(0.23, dim = c(years[3],sims[3]))
-RecruitsAnnualHCR<-array(NA, dim = c(years[3],sims[3]))
-CatchAnnualHCR[]<-0
-RecruitsAnnualHCR[]<-0
-
-CatchEHCR<-array(NA, dim = c(months[3]*years[3],sims[3]))
-CatchEHCR[]<-0
-CatchAnnualEHCR<-array(NA, dim = c(years[3],sims[3]))
-RecruitsAnnualEHCR<-array(NA, dim = c(years[3],sims[3]))
-CatchAnnualEHCR[]<-0
-RecruitsAnnualEHCR[]<-0
-
-#!To look for a correlation between wind in the first half a year and catch in the second
-CatchHalfAnnualHCR<-array(NA, dim = c(years[3],sims[3]))
-WindHCR<-array(NA, dim = c(years[3],sims[3]))
-Revenue_CL<-1  
-
-#Number of years the price is averaged over
-Num_Y_Price<-5
-#Number of years the harvest is averaged over
-Num_Y_Harvest<-5
-#!changed to include survival in the first six months dependant on wind and discharge
-#AnchPayment<-matrix(NA,ncol=sims[3],nrow=30)
-#TrigLevel<-matrix(NA,ncol=sims[3],nrow=30)
-#Premium<-0
-#AnchInsFund<-matrix(0,ncol=1000,nrow=30)
-#PremiumPaidIn<-matrix(0,ncol=1000,nrow=30)
-#DividendPaidOut<-matrix(0,ncol=1000,nrow=30)
-#Maximum that the lowest the insurance fund should be after 10 years in operation
-FundBottom<-0.01
-#Annual operating costs in millions of EUROs
-AnualOpCosts<-0
-#Annual investment interest
-InvRate<-0.05
-#Borrowing rate if fund falls below zero
-BorRate<-0.08
+#############################################################################################
 
 
 
 
 
+fec<-500; #eggs g-1
+
+sexr<-0.5;
+
+L<-18.95*(1-exp(-0.9*c(1:24)/12));#De Bellido 2000
+
+Weight<-0.0038*L^3.1939;                                                                                 #############MODIFICAR SEGUN TESIS DE MARGARITA##################
+
+#ro<-0.7;
+
+#lambda<-.2;
+
+ro<-0.8;
+
+lambda<-.05;
+
+Age<-2;
+
+Year<-2;
+
+Mes<-10;
+
+Natural<-0.1;
+
+FishingReference<-.2;
+
+ScalingNumber<-5e8;
+
+FactorRegulador<-1.5;
+
+Descargas<-matrix(c( 729.1999814, 637.7041958, 567.9486547, 324.4248588, 196.2893917, 110.2328006, 85.005432,   86.73152914, 86.9152896,  113.2173257, 240.3737251, 502.6743187, 1025.101012, 776.1171792, 730.4873785, 388.4697023, 190, 84.92539376, 37.72987643, 33.74368569, 55.5901853,  121.7030472, 309.1634101, 716.2193659),nrow=2,ncol=12, byrow=T)
+# Primera fila son las medias y la segunda las desviaciones tipicas de descargas alcala segun datos confederacion de 1942 al 1999
+
+Levantes<-matrix(c(6.10294117647059,7.26470588235294,9.83823529411765,5.48529411764706,6.39705882352941,6.58823529411765,6.48529411764706,4.17647058823529,6.11764705882353,6.89705882352941,6.20588235294118,7.54411764705882,3.91217932344921,4.20887324239971,4.32736674447365,3.04583551272688,3.02987574973356,3.90206393350704,2.99931058254864,3.33396899576254,4.23445470133370,4.25923520820623,3.44854508964202,3.91834157971126),nrow=2,ncol=12, byrow=T)
+
+# Primera fila son las medias y la segunda las desviaciones tipicas de descargas alcala segun datos del modelo FO de 2009
+
+##Condiciones iniciales
+
+##############load CondicionInicial
+
+##################for i=1:Simulacion N(:,:,:,i)=CondicionInicial;end
+
+eggs<-array(0, dim=c(Anyos,12,Simulacion));
+
+Suma<-0;
+Fishing<-c()
+Fishing[1]<-FishingReference;
+W<-c()
+D<-c()
+W[1]<-0;
+
+D[1]<-0;
 
 
 
+#############################################################################################
+
+#############################################################################################
+
+#############################   PARAMETROS DEL MODELO ECONOMICO     #########################
+
+#############################################################################################
+
+#############################################################################################
+
+
+
+#Parámetros diversos
+
+ComisionLonja<-0.03;
+
+ComisionCofradia<-0.02;
+
+T4<-0.0206;#Comisión que se paga por el uso del puerto basada en un procentaje de las ventas
+
+IVA<-0.1;
+
+#Parametros de la flota
+
+Esloras<-c(22,22.06,  21.15,  13.86,  16.5,   13.86,  19.95,17.25,22.2, 19,  22.14,24, 25, 24.3, 17.3, 12.98,21.58,11.4, 17.65,23.07,20.4, 12.2, 16.75,21.15,18.27,16.29,15.2, 15.44,17,13.56,19,13.3, 17,16.4, 16.35,15.6, 13.7, 17.15,15.9, 18.01,16.35,15.14,15.7, 16.3, 22.91,18,11.87,13.09,19.5, 11.8, 16.11,15.94,11.25,14.8, 18.46,18,18,17.83,16.65,16.35,15.2, 18.06,17.5, 17.8, 16.05,11.25,13.13,15.05,13.75,12.32,12.2, 16.95,13.2, 17.54,13.12,13.56,15.25,11.3, 17.9, 16.5, 15.94,14.41,17.72,13.32,10.8, 12.38,13.55);
+
+GT<-c(56.85,64.09,55,19.2, 22.68,18.15,48.54,28.35,47,36.21,61.09,66.38,85,66.45,30.2, 7.64, 77.5, 5.91, 63.38,45.81,56.43,12.03,25.12,58.9, 26.68,18.19,13.86,11.57,22.44,9.22, 38.49,13.59,27,20.26,21.94,20.78,18.71,26.4, 21.94,14.62,18.05,16.71,23.21,16.41,51.66,28.59,9.58, 11.73,39.06,8.13, 20.3, 17.75,8.61, 21.64,24.23,29.55,18.33,14.86,26.8, 21.94,21.77,29.67,19.95,8.5,17.54,8.61, 14.11,15.42,16.04,12.11,9.36, 52,14.88,19.86,11.5, 5.5, 12.93,6.21, 26.53,24.2, 16.09,8.88, 24.44,8.43, 10.57,10.04,10.4);
+
+CV<-c(250.18,375.28,316.41,69.9, 117.73,66.23,316.41,111.85,331.13,181.02,143.63,316.41,309.05,232.52,117.73,64.05,117.73,80.94,244.83,183.22,243.08,50.04,117.73,268.58,117.73,119.57,66.96,161.15,66.23,64.75,161.88,129.51,128.77,125.09,117,74.32,66,200,117,89.04,116.26,108.9,103.02,39,242.83,175.86,24.28,69.9, 312.73,58.87,88.3, 94.19,20.6, 154.53,88.3, 128.77,129.51,80.94,88.3, 106.7,88.3, 114.79,221,145,210,20.6, 139.8,98,160,285,73.58,294.33,88.3, 147.17,106.7,66.23,94.19,69.9, 121.41,72.11,94.28,49.3, 169.24,69.9, 86.83,128,140);
+
+TAC_legal<-c(120600,97200,120600,39600,119400,23400,136800,51600,151800,94800,152400,132000,124800,141000,75000,24000,97800,25200,117600,118800,137400,22800,108600,123000,76800,43800,53400,37800,71400,24600,104400,24000,82800,82200,64800,57000,23400,61800,47400,44400,43800,33600,53400,48000,110400,124200,33600,23400,148200,21000,73800,82200,38400,57000,72000,115200,65400,69600,50400,60600,74400,106800,70200,44400,41400,38400,28800,26400,28800,21000,21600,114000,31200,58200,26400,37800,34200,27600,79200,69600,40800,31200,86400,80400,27000,21000,21000);
+
+Suma_TAC_legal<-sum(TAC_legal);
+
+####Segmentacion de la flota
+
+Pequenyo<-which(Esloras<=18)    #Esloras[Esloras<=18];
+
+Mediano<-which(Esloras>18 & Esloras<=24);
+
+Grande<-which(Esloras>24);
+
+#####Costes fijos mantenimiento barco y artes
+
+RevisionAnual<-2500+(2500/15)*(Esloras-10);#Coste anualizado
+
+RevisionSeguridadAnual<-500; #Se realiza cad dos años a los equipos de seguridad, su coste anualizado son 500
+
+MantenimientoArtesAnual<-8000+(4000/15)*(Esloras-10);#Coste anualizado
+
+#####Gastos Laborales Fijos
+Tripulantes<-round(6+(8/15)*(Esloras-10));
+
+SS_Media<-300;#Coste mensual medio de la seguridad social por miembro tripulacion
+SS_Anual<-c()
+SS_Anual[Pequenyo]<-SS_Media*Tripulantes[Pequenyo]*6;#Coste anual de la SSpara todos los tripulantes
+
+SS_Anual[Mediano]<-SS_Media*Tripulantes[Mediano]*8;
+
+SS_Anual[Grande]<-SS_Media*Tripulantes[Grande]*10;
+
+#Otros
+
+AguaPuertoAnual<-15*36;
+
+Ferreteria<-10+(20/15)*(Esloras-10);#Gastos diarios de ferreteria
+
+#Valores de iniciacion
+
+Perdidas<-array(0,dim=c(length(Esloras), Anyos, Simulacion));
+
+
+
+#############################################################################################
+
+#############################################################################################
+
+#############################,   ciclos biologico-economicos       #########################
+
+#############################################################################################
+
+#############################################################################################
+
+k<-0
+Catches<-array(NA, dim=c(Anyos,Simulacion))
+TAC<-array(NA, dim=c(Anyos,Simulacion,length(Esloras)))
+Balance<-TAC
+Balance_Total<-TAC
+Armador<-TAC
+Trabajadores<-Balance
+#Perdidas_barco<-array(NA, dim=c(length(Esloras),2,Simulacion))
+PerdidasTrabajo<-array(0, dim=c(Anyos,Simulacion,length(Esloras)))#Será 1 si hay pérdidas o 0 en caso contrario
+Catchesbio<-Catches
+Catchesnum<-Catches
+
+#Catches<-array(6, dim=c(1,Simulacion));
+
+TAC_Adaptativa<-array(NA,dim=c(Anyos,Simulacion))
+W<-c()
+D<-c()
+#for Factor=0.1:0.1:3
+
+#·························for (Factor in seq(0.1,3,0.1)){
+Factor<-1#0.1
+k<-k+1;
+
+Suma_TAC_legal<-sum(TAC_legal);
+
+Suma_TAC_legal<-Suma_TAC_legal*Factor;
+
+
+
+
+Catches[1,1:Simulacion]<-6#array(6, dim=c(1,Simulacion));
+
+Descargas_mes_a_mes<-mapply(rnorm,Anyos*Simulacion,Descargas[1,], Descargas[2,])
+Descargas_mes_a_mes[Descargas_mes_a_mes<0]<-0
+
+Levantes_mes_a_mes<-mapply(rnorm,Anyos*Simulacion,Levantes[1,], Levantes[2,])
+Levantes_mes_a_mes[Levantes_mes_a_mes<0]<-0
+
+W<-rowSums(Levantes_mes_a_mes[,4:9])#Levantes anuales meses de puesta
+Descargas_mes_a_mes_puesta<-Descargas_mes_a_mes[,4:9]
+Descargas_mes_a_mes_puesta[Descargas_mes_a_mes_puesta<10|Descargas_mes_a_mes_puesta>1000]<-1
+Descargas_mes_a_mes_puesta[Descargas_mes_a_mes_puesta>10 & Descargas_mes_a_mes_puesta<1000]<-0
+D<-rowSums(Descargas_mes_a_mes_puesta)#
+W_año_anterior<-c(0,W)
+D_año_anterior<-c(0,D)
+FishingReference<-0.2;
+Fishing<-array(NA,dim=c(Anyos,Simulacion))
+N<-array(0,dim=c(24,Anyos,12,Simulacion))
+
+#N[,,,s]<-Condicioninicial
+
+#equivalente de Polina, problema por qué el primer índice edad varía de 1 a 24 Anchovy[1,2:7,,]<-CC
+
+#N(1:24,1:3,1:12,1:s)=ScalingNumber;
+
+eggs<-array(0, dim=c(Anyos,12,Simulacion))
+#eggs[3:17,1:12,s]<-0
+SpawningBiomass<-eggs
+
+
+Esfuerzo<-array(NA,dim=c(Anyos*Simulacion,length(Esloras)))
+Esfuerzo[,Pequenyo]<-rep(pmin(rep(180,Simulacion*Anyos),rnorm(Simulacion*Anyos,80,15)),times=length(Pequenyo))
+
+Esfuerzo[,Mediano]<-rep(pmin(rep(180,Simulacion*Anyos),rnorm(Simulacion*Anyos,115,20)),times=length(Mediano))  
+#min(180,normrnd(80,15));#Máximo de 180 dias segun la orden que regula al sector
+Esfuerzo[,Grande]<-rep(pmin(rep(180,Simulacion*Anyos),rnorm(Simulacion*Anyos,130,10)),times=length(Grande))
+#Esfuerzo[2,,]<-min(rep(180,Simulacion*Anyos),rnorm(Simulacion*Anyos,115,20));#med
+
+# Esfuerzo[3,,]<-min(rep(180,Simulacion*Anyos),rnorm(Simulacion*Anyos,130,10));#grande
+# dimnames(Esfuerzo)<-list(c("Pequeño", "Mediano","Grande"),1:Anyos,1:Simulacion)
+
+Precio<-matrix(rnorm(Anyos*Simulacion,1.7,0.3),nrow=Anyos)#€/Kg
+
+####Combustible
+
+GasoilPrecio<-rnorm(Anyos*Simulacion,0.5,0.1)#€/L
+
+
+HorasFaena<-10;
+
+CV_Kw<-0.745699871; #Numero de Kw que tiene un CV
+
+Gasoil_Hora<-(3.976+0.236*CV/CV_Kw)*1.2;#Consumo horario de gasoil en litros SEGUN BASTERRDIE ET AL 2010
+
+#Gasoil_Hora<-Gasoil_Hora*1.2;#Ineficiencia de moteores viejos
+ConsumoLubricantesAnual<-(100/5)*Esfuerzo
+
+
+ConsumoGasoilAnual<-t(Gasoil_Hora*t(Esfuerzo))*HorasFaena*GasoilPrecio;
+
+
+#Hielo
+
+HieloDiario<-75+(75/15)*(Esloras-10);
+
+HieloAnual<-HieloDiario*t(Esfuerzo);#la columna representa el valor para una combinación año simulación
+
+#Comida
+ComidaDiaria<-c()
+ComidaDiaria[Pequenyo]<-0;
+
+ComidaDiaria[Mediano]<-0;
+
+ComidaDiaria[Grande]<-50;
+
+ComidaAnual<-ComidaDiaria*t(Esfuerzo)#la columna representa el valor para una combinación año simulación
+
+#Porexspan
+
+PorexDiario<-150;
+
+PorexAnual<-PorexDiario*Esfuerzo;
+
+#Otros
+
+FerreteriaAnual<-Ferreteria*t(Esfuerzo)#la columna representa el valor para una combinación año simulación
+prob2perd<-c()
+for (s in 1:Simulacion){
+  N[,,,s]<-CondInR}
+
+
+####TAC_adaptativa
+# TAC_Adaptativa_W<-Suma_TAC_legal*(-0.0314*W_año_anterior+2.35);##El primero no vale ojo cada 30 años
+# 
+# mat_D_TAC_dividida<-rbind((1-D_año_anterior/6)*TAC_Adaptativa_W,rep(Suma_TAC_legal/FactorRegulador,Simulacion*Anyos+1))
+# 
+# 
+# TAC_Adaptativa_def<-matrix(Suma_TAC_legal,nrow=Anyos, ncol=Simulacion)
+# TAC_Adaptativa_W_D<-apply(mat_D_TAC_dividida, 2, max)
+# mat_D_TAC_mult<-rbind(TAC_Adaptativa_W_D,Suma_TAC_legal*FactorRegulador)
+# TAC_Adaptativa_W_D_mult<-apply(mat_D_TAC_mult, 2, min)
+# TAC_Adaptativa_def<-matrix(TAC_Adaptativa_W_D_mult[2:30001],nrow=30)
+# ######################################3
 
 
 
 shinyServer(function(input, output) { 
   # Reactive expression to compose a data frame containing all of
   # the values
- ro<-reactive(input$rho)#0.3#0.4
-  #D_sd<-reactive(input$sd_Disch)#0.4
-#   D_sd<-D_sd()
-#   D<-rlnorm(10000,4.6,D_sd)
-#   F_D<-dnorm(log(D)-log(100))
-F_D<-reactive(dnorm(log(rlnorm(1000,4.6,input$sd_Disch))-log(100)))
+  tac<-reactive(input$tac)
 
-output$plot1 <- renderPlot({
- F_D<-F_D()
- ro<-ro()
-  hist(ro*F_D, main="Survival rate in months 4 to 6,\naffected by the volume of \nfreshwater discharges", xlim=c(0,1), xlab="Rate")
-})
-    
-
-output$plot2 <- renderPlot({
-  F_D<-F_D()
-  ro<-ro()
-AS1<-AS/(exp(-M*6)*(ro*median(F_D))^3)#99.5 es la mediana de la distribución para valores de sd entre 0.2 y 0.7
-lambda<-log(AS1)/(3*median(-Wind))
-hist(exp(-Wind*lambda), main="Survival rate in months 1 to 3, \n affected by extreme wind frequency", xlim=c(0,1), xlab="Rate")
-})
-
-sliderValues <- reactive({
-  F_D<-F_D()
-  ro<-ro()
-  AS1<-AS/(exp(-M*6)*(ro*median(F_D))^3)#99.5 es la mediana de la distribución para valores de sd entre 0.2 y 0.7
-  lambda<-log(AS1)/(3*median(-Wind))
-  #D<-rlnorm(1000,4.6,D_sd)
-  # Compose data frame
-  data.frame(
-    Name = c("rho", "lambda", "sd Disch", "F"),#),
-    #"Decimal"),
-    #"Range",
-    #"Custom Format",
-    #"Animation"),
-    Value = as.character(c(input$rho,signif(lambda,2),input$sd_Disch,input$FM)),#, 
-    # input$decimal
-    #paste(input$range, collapse=' '),
-    #input$format,
-    #input$animation
-    #)), 
-    stringsAsFactors=FALSE)
-}) 
-
-output$values <- renderTable({
-  sliderValues()
-})
 
 strategy<-reactive({
- F_D<-F_D()
- ro<-ro()
- AS1<-AS/(exp(-M*6)*(ro*median(F_D))^3)#99.5 es la mediana de la distribución para valores de sd entre 0.2 y 0.7
- lambda<-log(AS1)/(3*median(-Wind))
-#lambda<-0.15
-  FishMortTarget<-input$FM
-  D_sd<-input$sd_Disch
- for(s in 1:sims[3])
- {
-   FishMort<-FishMortTarget
- for (y in 4:years[3]) {
-   #!Target monthly F value for May until Oct 
-   #FishMort<-FishMortTarget
-   SumWind<-0
-   
-   #Adults May
-   AnchovyHCR[2:11,"May",y,s]<-AnchovyHCR[1:10,"Apr",y-1,s]*exp(-M-FishMortTarget)
-   CatchHCR[1+12*(y-1),s]<-sum(AnchovyHCR[1:10,"Apr",y-1,s]*(1-exp(-M-FishMortTarget)))*FishMortTarget/(FishMortTarget+M)
-   AnchovyEHCR[2:11,"May",y,s]<-AnchovyEHCR[1:10,"Apr",y-1,s]*exp(-M-FishMort)
-   CatchEHCR[1+12*(y-1),s]<-sum(AnchovyEHCR[1:10,"Apr",y-1,s]*(1-exp(-M-FishMort)))*FishMort/(FishMort+M)
-   #Eggs May
-   #Probability of spawning even based on historical data
-   x<-runif(1,0,100)
-   if(x>=96) p<-4 else 
-     if(x<=37) p<-1 else 
-       if(x>37 && x<71) p<-2 else p<-3
-   AnchovyHCR[1,"May",y,s]<-sum(AnchovyHCR[,"May",y,s]*FecAge[,"May"])*p 
-   AnchovyHCR[1,"May",y,s]<-min(AnchovyHCR[1,"May",y,s],CC)
-   AnchovyEHCR[1,"May",y,s]<-sum(AnchovyEHCR[,"May",y,s]*FecAge[,"May"])*p 
-   AnchovyEHCR[1,"May",y,s]<-min(AnchovyEHCR[1,"May",y,s],CC)
-   
-   #Adults June
-   AnchovyHCR[3:11,"June",y,s]<-AnchovyHCR[2:10,"May",y,s]*exp(-M-FishMortTarget)
-   CatchHCR[2+12*(y-1),s]<-sum(AnchovyHCR[2:10,"May",y,s]*(1-exp(-M-FishMortTarget)))*FishMortTarget/(FishMortTarget+M)
-   AnchovyEHCR[3:11,"June",y,s]<-AnchovyEHCR[2:10,"May",y,s]*exp(-M-FishMort)
-   CatchEHCR[2+12*(y-1),s]<-sum(AnchovyEHCR[2:10,"May",y,s]*(1-exp(-M-FishMort)))*FishMort/(FishMort+M)
-   #Eggs June
-   #Probability of spawning even based on historical data
-   x<-runif(1,0,100)
-   if(x>=96) p<-4 else 
-     if(x<=37) p<-1 else 
-       if(x>37 && x<71) p<-2 else p<-3
-   AnchovyHCR[1,"June",y,s]<-sum(AnchovyHCR[,"June",y,s]*FecAge[,"June"])*p
-   AnchovyHCR[1,"June",y,s]<-min(AnchovyHCR[1,"June",y,s],CC)
-   AnchovyEHCR[1,"June",y,s]<-sum(AnchovyEHCR[,"June",y,s]*FecAge[,"June"])*p
-   AnchovyEHCR[1,"June",y,s]<-min(AnchovyEHCR[1,"June",y,s],CC)
-   #Juvenials June
-   #Number of days in a month with strong easterlies wind
-   Wind<-runif(1,2.25,15)
-   SumWind<-SumWind+Wind
-   AnchovyHCR[2,"June",y,s]<-AnchovyHCR[1,"May",y,s]*exp(-lambda*Wind)
-   AnchovyEHCR[2,"June",y,s]<-AnchovyEHCR[1,"May",y,s]*exp(-lambda*Wind)
-   #!Adjust Fishing mortality based on wind
-   #FishMort<-max(FishMort*(WindUp-0.012*(Wind-2.25)),0.85*FishMort)
-   
-   #Adults July
-   AnchovyHCR[4:11,"July",y,s]<-AnchovyHCR[3:10,"June",y,s]*exp(-M-FishMortTarget)
-   CatchHCR[3+12*(y-1),s]<-sum(AnchovyHCR[3:10,"June",y,s]*(1-exp(-M-FishMortTarget)))*FishMortTarget/(FishMortTarget+M)
-   AnchovyEHCR[4:11,"July",y,s]<-AnchovyEHCR[3:10,"June",y,s]*exp(-M-FishMort)
-   CatchEHCR[3+12*(y-1),s]<-sum(AnchovyEHCR[3:10,"June",y,s]*(1-exp(-M-FishMort)))*FishMort/(FishMort+M)
-   #Eggs July
-   #Probability of spawning even based on historical data
-   x<-runif(1,0,100)
-   if(x>=96) p<-4 else 
-     if(x<=37) p<-1 else 
-       if(x>37 && x<71) p<-2 else p<-3
-   AnchovyHCR[1,"July",y,s]<-sum(AnchovyHCR[,"July",y,s]*FecAge[,"July"])*p
-   AnchovyHCR[1,"July",y,s]<-min(AnchovyHCR[1,"July",y,s],CC)
-   AnchovyEHCR[1,"July",y,s]<-sum(AnchovyEHCR[,"July",y,s]*FecAge[,"July"])*p
-   AnchovyEHCR[1,"July",y,s]<-min(AnchovyEHCR[1,"July",y,s],CC)
-   #Juvenials July
-   #Number of days in a month with strong easterlies wind
-   Wind<-runif(1,2.25,15)
-   SumWind<-SumWind+Wind
-   AnchovyHCR[2:3,"July",y,s]<-AnchovyHCR[1:2,"June",y,s]*exp(-lambda*Wind)
-   AnchovyEHCR[2:3,"July",y,s]<-AnchovyEHCR[1:2,"June",y,s]*exp(-lambda*Wind)
-   #!Adjust Fishing mortality based on wind
-   #FishMort<-max(FishMort*(WindUp-0.012*(Wind-2.25)),0.85*FishMort)
-   
-   #Adults Aug
-   AnchovyHCR[5:11,"Aug",y,s]<-AnchovyHCR[4:10,"July",y,s]*exp(-M-FishMortTarget)
-   CatchHCR[4+12*(y-1),s]<-sum(AnchovyHCR[4:10,"July",y,s]*(1-exp(-M-FishMortTarget)))*FishMortTarget/(FishMortTarget+M)
-   AnchovyEHCR[5:11,"Aug",y,s]<-AnchovyEHCR[4:10,"July",y,s]*exp(-M-FishMort)
-   CatchEHCR[4+12*(y-1),s]<-sum(AnchovyEHCR[4:10,"July",y,s]*(1-exp(-M-FishMort)))*FishMort/(FishMort+M)
-   #Eggs Aug
-   #Probability of spawning even based on historical data
-   x<-runif(1,0,100)
-   if(x>=96) p<-4 else 
-     if(x<=37) p<-1 else 
-       if(x>37 && x<71) p<-2 else p<-3
-   AnchovyHCR[1,"Aug",y,s]<-sum(AnchovyHCR[,"Aug",y,s]*FecAge[,"Aug"])*p
-   AnchovyHCR[1,"Aug",y,s]<-min(AnchovyHCR[1,"Aug",y,s],CC)
-   AnchovyEHCR[1,"Aug",y,s]<-sum(AnchovyEHCR[,"Aug",y,s]*FecAge[,"Aug"])*p
-   AnchovyEHCR[1,"Aug",y,s]<-min(AnchovyEHCR[1,"Aug",y,s],CC)
-   #Juvenials Aug
-   #Number of days in a month with strong easterlies wind
-   Wind<-runif(1,2.25,15)
-   SumWind<-SumWind+Wind
-   AnchovyHCR[2:4,"Aug",y,s]<-AnchovyHCR[1:3,"July",y,s]*exp(-lambda*Wind)
-   AnchovyEHCR[2:4,"Aug",y,s]<-AnchovyEHCR[1:3,"July",y,s]*exp(-lambda*Wind)
-   #!Adjust Fishing mortality based on wind
-   #FishMort<-max(FishMort*(WindUp-0.012*(Wind-2.25)),0.85*FishMort)
-   
-   #Adults Sept
-   AnchovyHCR[6:11,"Sept",y,s]<-AnchovyHCR[5:10,"Aug",y,s]*exp(-M-FishMortTarget)
-   CatchHCR[5+12*(y-1),s]<-sum(AnchovyHCR[5:10,"Aug",y,s]*(1-exp(-M-FishMortTarget)))*FishMortTarget/(FishMortTarget+M)
-   AnchovyEHCR[6:11,"Sept",y,s]<-AnchovyEHCR[5:10,"Aug",y,s]*exp(-M-FishMort)
-   CatchEHCR[5+12*(y-1),s]<-sum(AnchovyEHCR[5:10,"Aug",y,s]*(1-exp(-M-FishMort)))*FishMort/(FishMort+M)
-   #Eggs Sept
-   #Eggs Sept
-   #Probability of spawning even based on historical data
-   x<-runif(1,0,100)
-   if(x>=96) p<-4 else 
-     if(x<=37) p<-1 else 
-       if(x>37 && x<71) p<-2 else p<-3
-   AnchovyHCR[1,"Sept",y,s]<-sum(AnchovyHCR[,"Sept",y,s]*FecAge[,"Sept"])*p
-   AnchovyHCR[1,"Sept",y,s]<-min(AnchovyHCR[1,"Sept",y,s],CC)
-   AnchovyEHCR[1,"Sept",y,s]<-sum(AnchovyEHCR[,"Sept",y,s]*FecAge[,"Sept"])*p
-   AnchovyEHCR[1,"Sept",y,s]<-min(AnchovyEHCR[1,"Sept",y,s],CC)
-   #Juvenials Sept
-   #Number of days in a month with strong easterlies wind
-   Wind<-runif(1,2.25,15)
-   SumWind<-SumWind+Wind
-   AnchovyHCR[2:4,"Sept",y,s]<-AnchovyHCR[1:3,"Aug",y,s]*exp(-lambda*Wind)
-   AnchovyEHCR[2:4,"Sept",y,s]<-AnchovyEHCR[1:3,"Aug",y,s]*exp(-lambda*Wind)
-   #Modelling monthly discharge
-   D<-rlnorm(1,logD_mean,D_sd)
-   F_D<-dnorm(log(D)-log(100))
-   AnchovyHCR[5,"Sept",y,s]<-AnchovyHCR[4,"Aug",y,s]*ro*F_D
-   AnchovyEHCR[5,"Sept",y,s]<-AnchovyEHCR[4,"Aug",y,s]*ro*F_D
-   #!Adjust Fishing mortality based on wind
-   #FishMort<-max(FishMort*(WindUp-0.012*(Wind-2.25)),0.85*FishMort)
-   #!Adjust Fishing mortality based on discharges
-   #F_factor<-max(F_D/dnorm(0),0.85)
-   #FishMort<-F_factor*FishMort
-   
-   #Adults Oct
-   AnchovyHCR[6:10,"Oct",y,s]<-AnchovyHCR[6:10,"Sept",y,s]*exp(-M-FishMortTarget)
-   CatchHCR[6+12*(y-1),s]<-sum(AnchovyHCR[6:10,"Sept",y,s]*(1-exp(-M-FishMortTarget)))*FishMortTarget/(FishMortTarget+M)
-   AnchovyEHCR[6:10,"Oct",y,s]<-AnchovyEHCR[6:10,"Sept",y,s]*exp(-M-FishMort)
-   CatchEHCR[6+12*(y-1),s]<-sum(AnchovyEHCR[6:10,"Sept",y,s]*(1-exp(-M-FishMort)))*FishMort/(FishMort+M)
-   #Juvenials Oct
-   #Number of days in a month with strong easterlies wind
-   Wind<-runif(1,2.25,15)
-   SumWind<-SumWind+Wind
-   AnchovyHCR[1:3,"Oct",y,s]<-AnchovyHCR[1:3,"Sept",y,s]*exp(-lambda*Wind)
-   AnchovyEHCR[1:3,"Oct",y,s]<-AnchovyEHCR[1:3,"Sept",y,s]*exp(-lambda*Wind)
-   #Modelling monthly discharge
-   D<-rlnorm(1,logD_mean,D_sd)
-   F_D<-dnorm(log(D)-log(100))
-   AnchovyHCR[4:5,"Oct",y,s]<-AnchovyHCR[4:5,"Sept",y,s]*ro*F_D
-   AnchovyEHCR[4:5,"Oct",y,s]<-AnchovyEHCR[4:5,"Sept",y,s]*ro*F_D
-   #!Adjust Fishing mortality based on wind
-   #FishMort<-max(FishMort*(WindUp-0.012*(Wind-2.25)),0.85*FishMort)
-   #!Adjust Fishing mortality based on discharges
-   #F_factor<-max(F_D/dnorm(0),0.85)
-   #FishMort<-F_factor*FishMort
-   
-   WindHCR[y,s]<-SumWind
-   
-   #the fishing for the rest of the year depends on previous months' wind conditions
-   if (FishMortTarget*{WindUp+5*(SumWind/5-2.25)/(5*(2.25-8.62))} <= FishMortTarget/2) 
-   {
-     FishMort<-FishMortTarget/2
-   }
-   else
-   {
-     FishMort<-FishMortTarget*{WindUp+5*(SumWind/5-2.25)/(5*(2.25-8.62))}
-   }
-   
-   Rel_F[s,y]<- FishMort/FishMortTarget
-   
-   #Adults Nov
-   AnchovyHCR[6:10,"Nov",y,s]<-AnchovyHCR[6:10,"Oct",y,s]*exp(-M)#-FishMortTarget)
-   # CatchHCR[7+12*(y-1),s]<-sum(AnchovyHCR[6:10,"Oct",y,s]*(1-exp(-M)-FishMortTarget)))*FishMortTarget/(FishMortTarget+M)
-   AnchovyEHCR[6:10,"Nov",y,s]<-AnchovyEHCR[6:10,"Oct",y,s]*exp(-M)#-FishMort)
-   # CatchEHCR[7+12*(y-1),s]<-sum(AnchovyEHCR[6:10,"Oct",y,s]*(1-exp(-M)-FishMort)))*FishMort/(FishMort+M)
-   #Juvenials 
-   #Number of days in a month with strong easterlies wind
-   Wind<-runif(1,2.25,15)
-   AnchovyHCR[1:2,"Nov",y,s]<-AnchovyHCR[1:2,"Oct",y,s]*exp(-lambda*Wind)
-   AnchovyEHCR[1:2,"Nov",y,s]<-AnchovyEHCR[1:2,"Oct",y,s]*exp(-lambda*Wind)
-   #Modelling monthly discharge
-   D<-rlnorm(1,logD_mean,D_sd)
-   F_D<-dnorm(log(D)-log(100))
-   AnchovyHCR[3:5,"Nov",y,s]<-AnchovyHCR[3:5,"Oct",y,s]*ro*F_D
-   AnchovyEHCR[3:5,"Nov",y,s]<-AnchovyEHCR[3:5,"Oct",y,s]*ro*F_D
-   #!Adjust Fishing mortality based on wind
-   #FishMort<-max(FishMort*(WindUp-0.012*(Wind-2.25)),0.85*FishMort)
-   #!Adjust Fishing mortality based on discharges
-   #F_factor<-max(F_D/dnorm(0),0.85)
-   #FishMort<-F_factor*FishMort
-   
-   #Adults Dec
-   AnchovyHCR[5:10,"Dec",y,s]<-AnchovyHCR[5:10,"Nov",y,s]*exp(-M)#-FishMortTarget)
-   #CatchHCR[8+12*(y-1),s]<-sum(AnchovyHCR[5:10,"Nov",y,s]*(1-exp(-M-FishMortTarget)))*FishMortTarget/(FishMortTarget+M)
-   AnchovyEHCR[5:10,"Dec",y,s]<-AnchovyEHCR[5:10,"Nov",y,s]*exp(-M)#-FishMort)
-   # CatchEHCR[8+12*(y-1),s]<-sum(AnchovyEHCR[5:10,"Nov",y,s]*(1-exp(-M-FishMort)))*FishMort/(FishMort+M)
-   #Juvenials
-   #Number of days in a month with strong easterlies wind
-   Wind<-runif(1,2.25,15)
-   AnchovyHCR[1,"Dec",y,s]<-AnchovyHCR[1,"Nov",y,s]*exp(-lambda*Wind)
-   AnchovyEHCR[1,"Dec",y,s]<-AnchovyEHCR[1,"Nov",y,s]*exp(-lambda*Wind)
-   #Modelling monthly discharge
-   D<-rlnorm(1,logD_mean,D_sd)
-   F_D<-dnorm(log(D)-log(100))
-   AnchovyHCR[2:4,"Dec",y,s]<-AnchovyHCR[2:4,"Nov",y,s]*ro*F_D
-   AnchovyEHCR[2:4,"Dec",y,s]<-AnchovyEHCR[2:4,"Nov",y,s]*ro*F_D
-   #!Adjust Fishing mortality based on wind
-   #FishMort<-max(FishMort*(WindUp-0.012*(Wind-2.25)),0.85*FishMort)
-   #!Adjust Fishing mortality based on discharges
-   #F_factor<-max(F_D/dnorm(0),0.85)
-   #FishMort<-F_factor*FishMort
-   
-   #Adults Jan
-   AnchovyHCR[4:10,"Jan",y,s]<-AnchovyHCR[4:10,"Dec",y,s]*exp(-M)#-FishMortTarget)
-   #CatchHCR[9+12*(y-1),s]<-sum(AnchovyHCR[4:10,"Dec",y,s]*(1-exp(-M-FishMortTarget)))*FishMortTarget/(FishMortTarget+M)
-   AnchovyEHCR[4:10,"Jan",y,s]<-AnchovyEHCR[4:10,"Dec",y,s]*exp(-M)#-FishMort)
-   #CatchEHCR[9+12*(y-1),s]<-sum(AnchovyEHCR[4:10,"Dec",y,s]*(1-exp(-M-FishMort)))*FishMort/(FishMort+M)
-   #Juvenials
-   #Modelling monthly discharge
-   D<-rlnorm(1,logD_mean,D_sd)
-   F_D<-dnorm(log(D)-log(100)) 
-   AnchovyHCR[1:3,"Jan",y,s]<-AnchovyHCR[1:3,"Dec",y,s]*ro*F_D
-   AnchovyEHCR[1:3,"Jan",y,s]<-AnchovyEHCR[1:3,"Dec",y,s]*ro*F_D
-   #!Adjust Fishing mortality based on discharges
-   #F_factor<-max(F_D/dnorm(0),0.85)
-   #FishMort<-F_factor*FishMort
-   
-   #Adults Feb
-   AnchovyHCR[3:10,"Feb",y,s]<-AnchovyHCR[3:10,"Jan",y,s]*exp(-M)#-FishMortTarget)
-   #CatchHCR[10+12*(y-1),s]<-sum(AnchovyHCR[3:10,"Jan",y,s]*(1-exp(-M-FishMortTarget)))*FishMortTarget/(FishMortTarget+M)
-   AnchovyEHCR[3:10,"Feb",y,s]<-AnchovyEHCR[3:10,"Jan",y,s]*exp(-M)#-FishMort)
-   # CatchEHCR[10+12*(y-1),s]<-sum(AnchovyEHCR[3:10,"Jan",y,s]*(1-exp(-M-FishMort)))*FishMort/(FishMort+M)
-   #Juvenials
-   #Modelling monthly discharge
-   D<-rlnorm(1,logD_mean,D_sd)
-   F_D<-dnorm(log(D)-log(100)) 
-   AnchovyHCR[1:2,"Feb",y,s]<-AnchovyHCR[1:2,"Jan",y,s]*ro*F_D
-   AnchovyEHCR[1:2,"Feb",y,s]<-AnchovyEHCR[1:2,"Jan",y,s]*ro*F_D
-   #!Adjust Fishing mortality based on discharges
-   #F_factor<-max(F_D/dnorm(0),0.85)
-   #FishMort<-F_factor*FishMort
-   
-   #Adults March
-   AnchovyHCR[2:10,"March",y,s]<-AnchovyHCR[2:10,"Feb",y,s]*exp(-M-FishMortTarget)
-   CatchHCR[11+12*(y-1),s]<-sum(AnchovyHCR[2:10,"Feb",y,s]*(1-exp(-M-FishMortTarget)))*FishMortTarget/(FishMortTarget+M)
-   AnchovyEHCR[2:10,"March",y,s]<-AnchovyEHCR[2:10,"Feb",y,s]*exp(-M-FishMort)
-   CatchEHCR[11+12*(y-1),s]<-sum(AnchovyEHCR[2:10,"Feb",y,s]*(1-exp(-M-FishMort)))*FishMort/(FishMort+M)
-   #Juvenials
-   #Modelling monthly discharge
-   D<-rlnorm(1,logD_mean,D_sd)
-   F_D<-dnorm(log(D)-log(100))
-   AnchovyHCR[1,"March",y,s]<-AnchovyHCR[1,"Feb",y,s]*ro*F_D
-   AnchovyEHCR[1,"March",y,s]<-AnchovyEHCR[1,"Feb",y,s]*ro*F_D
-   #!Adjust Fishing mortality based on discharges
-   #F_factor<-max(F_D/dnorm(0),0.85)
-   #FishMort<-F_factor*FishMort
-   
-   #Adults Apr
-   AnchovyHCR[1:10,"Apr",y,s]<-AnchovyHCR[1:10,"March",y,s]*exp(-M-FishMortTarget)
-   CatchHCR[12+12*(y-1),s]<-sum(AnchovyHCR[1:10,"March",y,s]*(1-exp(-M-FishMortTarget)))*FishMortTarget/(FishMortTarget+M)
-   AnchovyEHCR[1:10,"Apr",y,s]<-AnchovyEHCR[1:10,"March",y,s]*exp(-M-FishMort)
-   CatchEHCR[12+12*(y-1),s]<-sum(AnchovyEHCR[1:10,"March",y,s]*(1-exp(-M-FishMort)))*FishMort/(FishMort+M)
-   m0<-1+12*(y-1)
-   m1<-12+12*(y-1)
-   CatchAnnualHCR[y,s]<- sum(CatchHCR[m0:m1,s])
-   RecruitsAnnualHCR[y,s]<-AnchovyHCR[5,"Nov",y,s]+AnchovyHCR[4,"Dec",y,s]+AnchovyHCR[3,"Jan",y,s]+AnchovyHCR[2,"Feb",y,s]+AnchovyHCR[1,"March",y,s]
-   
-   CatchAnnualEHCR[y,s]<- sum(CatchEHCR[m0:m1,s])
-   RecruitsAnnualEHCR[y,s]<-AnchovyEHCR[5,"Nov",y,s]+AnchovyEHCR[4,"Dec",y,s]+AnchovyEHCR[3,"Jan",y,s]+AnchovyEHCR[2,"Feb",y,s]+AnchovyEHCR[1,"March",y,s]
-   
-   CatchHalfAnnualHCR[y,s]<- sum(CatchEHCR[(m0+6):m1,s])
- }
-}
-
-
-CC_Y<-CC*5
-x<-AnchovyHCR[1,"May",17:years[3],] +
-  AnchovyHCR[1,"June",17:years[3],] +
-  AnchovyHCR[1,"July",17:years[3],]+
-  AnchovyHCR[1,"Aug",17:years[3],] +
-  AnchovyHCR[1,"Sept",17:years[3],]
-
-
-x[x[]<CC_Y]<-0
-x[x[]>0]<-1
-#sum(x)/((years[3]-16)*sims[3])
-Prob_CC_Reached_Y_HCR<- sum(x)/((years[3]-16)*sims[3])
-#Look at the proportion of simulations when eggs fall below 10% of CC 
-
-y<-AnchovyHCR[1,"May",17:years[3],] +
-  AnchovyHCR[1,"June",17:years[3],] +
-  AnchovyHCR[1,"July",17:years[3],]+
-  AnchovyHCR[1,"Aug",17:years[3],] +
-  AnchovyHCR[1,"Sept",17:years[3],]
-y[y[]<0.1*CC_Y]<-1
-y[y[]>1]<-0
-#sum(y)/((years[3]-16)*sims[3])
-Prob_Crash_Y_HCR<-sum(y)/((years[3]-16)*sims[3])
-
-#Look at the proportion of simulations when CC is reached
-CC_Y<-CC*5
-x<-AnchovyEHCR[1,"May",17:years[3],] +
-  AnchovyEHCR[1,"June",17:years[3],] +
-  AnchovyEHCR[1,"July",17:years[3],]+
-  AnchovyEHCR[1,"Aug",17:years[3],] +
-  AnchovyEHCR[1,"Sept",17:years[3],]
-
-
-x[x[]<CC_Y]<-0
-x[x[]>0]<-1
-#sum(x)/((years[3]-16)*sims[3])
-Prob_CC_Reached_Y_EHCR<- sum(x)/((years[3]-16)*sims[3])
-#Look at the proportion of simulations when eggs fall below 10% of CC 
-
-y<-AnchovyEHCR[1,"May",17:years[3],] +
-  AnchovyEHCR[1,"June",17:years[3],] +
-  AnchovyEHCR[1,"July",17:years[3],]+
-  AnchovyEHCR[1,"Aug",17:years[3],] +
-  AnchovyEHCR[1,"Sept",17:years[3],]
-y[y[]<0.1*CC_Y]<-1
-y[y[]>1]<-0
-#sum(y)/((years[3]-16)*sims[3])
-Prob_Crash_Y_EHCR<-sum(y)/((years[3]-16)*sims[3])
-
-AveMonthlyCatchHCR<-array()
-for (s in 1:sims[3]){
-  AveMonthlyCatchHCR[s]<-median(CatchHCR[t0:t1,s])
-}
-#average Quarterly Catches
-#median(AveMonthlyCatchHCR*3/10^6)
-AveQuartCatchHCR<-median(AveMonthlyCatchHCR*3/10^6)
-
-
-AveMonthlyCatchEHCR<-array()
-for (s in 1:sims[3]){
-  AveMonthlyCatchEHCR[s]<-median(CatchEHCR[t0:t1,s])
-}
-#average Quarterly Catches
-#median(AveMonthlyCatchEHCR*3/10^6)
-AveQuartCatchEHCR<-median(AveMonthlyCatchEHCR*3/10^6)
-
-
-
-#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-#! Insurance calculations are based on 30 years from year 8 to 37
-#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-#!Units in Millions
-
-CatchAnnualX<-CatchAnnualHCR
-CatchAnnualX[CatchAnnualX[]>2.0*10^9]<-1
-CatchAnnualX[CatchAnnualX[]>1]<-0
-#Proportion of times catches are unrealistically high
-#sum(CatchAnnualX)/(sims[3]*years[3])
-
-#!Limit catches to a maximum capacity
-#CatchAnnual[CatchAnnual[]>2.0*10^9]<-2.0*10^9
-
-AnchYield<-CatchAnnualHCR/10^6
-#AnchWeightedPrice<-CatchAnnualHCR
-AnchPayment<-matrix(NA,ncol=sims[3],nrow=30)
-TrigLevel<-matrix(NA,ncol=sims[3],nrow=30)
-#Assume an average Anchovy is worth 23 Euro Cents
-#AnchWeightedPrice[]<-0.23
-#!DECIDE REVENUE COVERAGE LEVEL
-# Revenue_CL<-1  
-# 
-# #Number of years the price is averaged over
-# Num_Y_Price<-5
-# #Number of years the harvest is averaged over
-# Num_Y_Harvest<-5
-
-#CREATE MATRIX OBJECT TO STORE VALUES
-
-AveRev<-median(AnchYield[17:46,]*AnchWeightedPrice[17:46,]) 
-#!EXTRACT ITERATIONS FOR 30 YEARS, FROM year =71 TO 100
-for( i in 1:sims[3])
-{
-  for(y in 1:30)
-  {
-    j<-y+17
-    
-    #AveRev<-mean(AnchYield[(j-Num_Y_Harvest):(j-1),i]*AnchWeightedPrice[(j-Num_Y_Price):(j-1),i])  
-    Trigger<-Revenue_CL* AveRev
-    TrigLevel[y,i]<-Trigger
-    if (AnchYield[j,i]*AnchWeightedPrice[j,i]<Trigger)
-    {
-      AnchPayment[y,i]<-(Trigger-AnchYield[j,i]*AnchWeightedPrice[j,i])
-    }else
-    {                                                           
-      AnchPayment[y,i]<-0
-    }
-  }#end year loop
-}#end iteration loop
-
-#################################################
-#!Calculate the premiums, insurance fund
-Premium<-0
- AnchInsFund<-matrix(0,ncol=1000,nrow=30)
- PremiumPaidIn<-matrix(0,ncol=1000,nrow=30)
- DividendPaidOut<-matrix(0,ncol=1000,nrow=30)
- #Maximum that the lowest the insurance fund should be after 10 years in operation
-# FundBottom<-0.01
-# #Annual operating costs in millions of EUROs
-# AnualOpCosts<-0
-# #Annual investment interest
-# InvRate<-0.05
-# #Borrowing rate if fund falls below zero
-# BorRate<-0.08
-
-#Determine the 75th percentile of payments by insurance
-#75% de 30*sims[3]*75/100
-MaxPayout<-sort(as.vector(AnchPayment))[30*sims[3]*75/100]   #75% de 30000
-AnchovyPayment<-AnchPayment
-AnchovyPayment[AnchovyPayment[]>MaxPayout]<-MaxPayout
-
-if(MaxPayout>0)
-{
-  while(min(AnchInsFund[11:30,])<FundBottom)
-  {
-    Premium<-Premium+1
-    AnchInsFund<-matrix(0,ncol=sims[3],nrow=30)
-    for( i in 1:sims[3])
-    {
-      for(y in 1:29)
-      {   
-        if(AnchInsFund[y,i]<0)
-        {
-          AnchInsFund[y+1,i]<-AnchInsFund[y,i]*(1+BorRate)+Premium-AnchovyPayment[y,i]-AnualOpCosts
-          PremiumPaidIn[y+1,i]<-Premium
-        }else
-        {
-          if(AnchInsFund[y,i]<2*MaxPayout)
-          {
-            AnchInsFund[y+1,i]<-AnchInsFund[y,i]*(1+InvRate)+Premium-AnchovyPayment[y,i]-AnualOpCosts
-            PremiumPaidIn[y+1,i]<-Premium
-          }else
-          {
-            AnchInsFund[y+1,i]<-AnchInsFund[y,i]-AnchovyPayment[y,i]-AnualOpCosts
-            PremiumPaidIn[y+1,i]<-0
-            DividendPaidOut[y+1,i]<-AnchInsFund[y,i]*InvRate
+  tac<-tac()
+  TAC_Adaptativa_def<-matrix(tac*1000000, nrow=Anyos, ncol=Simulacion)
+  for (s in 1:Simulacion){
+    for (year in 2:Anyos){
+      
+      Suma_1<-0
+      FishingReference<-0.2
+     
+      
+      while (Suma_1*1e-3>TAC_Adaptativa_def[year, s] | Suma_1==0)
+      {
+        
+        #############################     ciclos biologico       #########################
+        
+        Fishing[year, s]=FishingReference
+        
+        
+        
+        
+        for (month in 2:12){
+          
+          
+          for (age in 7:24){
+            
+            if (month>1 && month<12){
+              #N[age,year,1,s]<-N[age-1,year-1,12,s]*exp(-Natural-Fishing);
+              #N[age,year,1,s]<-N[age-1,year-1,12,s]*exp(-Natural-Fishing)
+              N[age,year,month,s]<-N[age-1,year,month-1,s]*exp(-Natural-Fishing[year,s]);
+            } #end for
+            else
+            {
+              N[age,year,1,s]<-N[age-1,year-1,12,s]*exp(-Natural)
+              
+              N[age,year,month,s]<-N[age-1,year,month-1,s]*exp(-Natural)}
           }
-        }         
-      }#end year loop       
-    }#end iteration loop      
-  }#end while loop
-}#end if maxpayout is non-zero
-
-#Reinsurance premium
-ReInsPayment<-AnchPayment-AnchovyPayment
-#Calculate the expected payouts for re-insurance, and add 25% to cover costs and profits   
-ReInsPremium<-mean(apply(ReInsPayment,2,mean))*1.25
-
-#####################################################################################
-#!FUND DEVELOPMENT GRATH
-#windows(7,5)
-#par(mfrow=c(1,1))
-# M<-min(AnchInsFund[11:30,]) 
-# for( i in 1:1000)
-# {
-#   for(y in 1:30)
-#   {     
-#     if (AnchInsFund[y,i]==M) 
-#     {
-#       Y<-y
-#       Iter<-i
-#     }
-#   } 
-# }
-
-# plot(AnchInsFund[,Iter],type="l", lwd=2, main="Insurance Fund", xlab="Years of operation", ylim=c(min(AnchInsFund),2*(MaxPayout+Premium)), ylab="Millions of EUROs", col = "red")
-# lines(AnchInsFund[,1000], col = "purple", lwd=2)
-# lines(AnchInsFund[,50], col="green", lwd=2)
-# lines(AnchInsFund[,150], col="blue", lwd=2)
-# abline(h=2*MaxPayout, col = "black", lty = 2) 
-# legend("bottomright", "Capped fund limit", lty = 2, col="black", bty ="n")
-# legend("topright", paste(sep="", "", Revenue_CL*100,"% CL Revenue policy"),bty ="n")
-##################################################################################### 
-PremiumHCR<-Premium
-AvePremiumHCR<-mean(PremiumPaidIn)
-ReInsPremiumHCR<-ReInsPremium
-#Average yield to compare to premiums
-MeanYieldHCR<-mean(as.vector(AnchYield[18:48,])*0.23)
-SdYieldHCR<-sd(as.vector(AnchYield[18:48,])*0.23)
-
-
-
-#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-#! Insurance calculations are based on 30 years from year 8 to 37
-#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-#!Units in Millions
-
-CatchAnnualX<-CatchAnnualEHCR
-CatchAnnualX[CatchAnnualX[]>2.0*10^9]<-1
-CatchAnnualX[CatchAnnualX[]>1]<-0
-#Proportion of times catches are unrealistically high
-#sum(CatchAnnualX)/(sims[3]*years[3])
-
-#!Limit catches to a maximum capacity
-#CatchAnnual[CatchAnnual[]>2.0*10^9]<-2.0*10^9
-
-AnchYield<-CatchAnnualEHCR/10^6
-#AnchWeightedPrice<-CatchAnnualEHCR
-
-#Assume an average Anchovy is worth 23 Euro Cents
-#AnchWeightedPrice[]<-0.23
-#!DECIDE REVENUE COVERAGE LEVEL
-# Revenue_CL<-1  
-# 
-# #Number of years the price is averaged over
-# Num_Y_Price<-5
-# #Number of years the harvest is averaged over
-# Num_Y_Harvest<-5
-
-#CREATE MATRIX OBJECT TO STORE VALUES
-AnchPayment<-matrix(NA,ncol=sims[3],nrow=30)
-TrigLevel<-matrix(NA,ncol=sims[3],nrow=30)
-
-#!EXTRACT ITERATIONS FOR 30 YEARS, FROM year =71 TO 100
-for( i in 1:sims[3])
-{
-  for(y in 1:30)
-  {
-    j<-y+17
+          spawn<-sample(1:4, 1, replace=T,prob=c(0.37,0.37,0.22,0.04))     #runifdisc(1,1,4);#Numero de puestas al mes (aleatorioentre 1 y 4)
+          
+          SpawningBiomass[year, month, s]=sum(Weight[11:24]*N[11:24,year,month,s]);
+          
+          if (month>2 && month<10){
+            
+            eggs[year, month, s]<-fec*sexr*spawn*SpawningBiomass[year, month, s];
+          }#end if
+          #month<-c(7:12)
+          if (month>6){
+            N[6,year,month,s]<-eggs[year, month-5,s]*exp(-lambda*Levantes_mes_a_mes[(year+(s-1)*Anyos),(month-2)])*exp(-lambda*Levantes_mes_a_mes[(year+(s-1)*Anyos),(month-1)])*exp(-lambda*Levantes_mes_a_mes[(year+(s-1)*Anyos),month])*(ro^3)*pnorm(log(Descargas_mes_a_mes[(year+(s-1)*Anyos),(month-2)])-log(100))*pnorm(log(Descargas_mes_a_mes[(year+(s-1)*Anyos),(month-1)])-log(100))*pnorm(log(Descargas_mes_a_mes[(year+(s-1)*Anyos),month])-log(100)) 
+            
+            if (N[6,year,month,s]>ScalingNumber) {
+              N[6,year,month,s]<-ScalingNumber}# end if
+            if (N[6,year,month,s]<1e6) {
+              N[6,year,month,s]<-1e6}
+            
+            
+          }#end if
+        }#end for month
+        
+        
+        Catchesbio[year,s]<-sum(Weight[6:24]%*%(N[6:24, year, 2:11, s]*(1-exp(-Natural-Fishing[year,s]))*Fishing[year,s]/(Fishing[year,s]+Natural)))
+        
+        Catchesnum[year,s]<-sum(N[6:24, year, 2:11, s]*(1-exp(-Natural-Fishing[year,s]))*Fishing[year,s]/(Fishing[year,s]+Natural))
+        
+        Catches[year,s]<-Catchesbio[year,s]*1e-9;#%En miles de toneladas
+        Suma<-Catchesbio[year,s]
+        Suma_1<-Suma
+        
+        Suma<-0
+        
+        FishingReference<-FishingReference*.9
+        
+      }#end while
+      
+      
+      
+      
+      ############################################################################################
+      
+      
+      
+      ###############################     ciclos económico       ###########################
+      
+      
+      
+      #asume que un boqueron pesa 10g, la TAC está en Kg
+      
+      #Desactivandolo se conserva la TAC asignada por el estado
+      
+      TAC[year,s,]<-1e6*Catches[year,s]*c(0.0205500460075657,0.0165627236478888,0.0205500460075657,0.00674777630099172,0.0203455679378387,0.00398732235967692,0.0233104999488805,0.00879255699826194,0.0258664758204683,0.0161537675084347,0.0259687148553318,0.0224925876699724,0.0212657192516103,0.0240261731929251,0.0127798793579389,0.00408956139454044,0.0166649626827523,0.00429403946426746,0.0200388508332481,0.0202433289029752,0.0234127389837440,0.00388508332481341,0.0185052653102955,0.0209590021470197,0.0130865964625294,0.00746344954503630,0.00909927410285247,0.00644105919640119,0.0121664451487578,0.00419180042940395,0.0177895920662509,0.00408956139454044,0.0141089868111645,0.0140067477763010,0.0110418157652592,0.00971270831203354,0.00398732235967692,0.0105306205909416,0.00807688375421736,0.00756568857989981,0.00746344954503630,0.00572538595235661,0.00909927410285247,0.00817912278908087,0.0188119824148860,0.0211634802167468,0.00572538595235661,0.00398732235967692,0.0252530416112872,0.00357836622022288,0.0125754012882118,0.0140067477763010,0.00654329823126470,0.00971270831203354,0.0122686841836213,0.0196298946937941,0.0111440548001227,0.0118597280441673,0.00858807892853492,0.0103261425212146,0.0126776403230754,0.0181985482057049,0.0119619670790308,0.00756568857989981,0.00705449340558225,0.00654329823126470,0.00490747367344852,0.00449851753399448,0.00490747367344852,0.00357836622022288,0.00368060525508639,0.0194254166240671,0.00531642981290257,0.00991718638176056,0.00449851753399448,0.00644105919640119,0.00582762498722012,0.00470299560372150,0.0134955526019834,0.0118597280441673,0.00695225437071874,0.00531642981290257,0.0147224210203456,0.0137000306717105,0.00460075656885799,0.00357836622022288,0.00357836622022288)
+      
+    }#end for year
     
-    #AveRev<-mean(AnchYield[(j-Num_Y_Harvest):(j-1),i]*AnchWeightedPrice[(j-Num_Y_Price):(j-1),i])  
-    Trigger<-Revenue_CL* AveRev
-    TrigLevel[y,i]<-Trigger
-    if (AnchYield[j,i]*AnchWeightedPrice[j,i]<Trigger)
-    {
-      AnchPayment[y,i]<-(Trigger-AnchYield[j,i]*AnchWeightedPrice[j,i])
-    }else
-    {                                                           
-      AnchPayment[y,i]<-0
-    }
-  }#end year loop
-}#end iteration loop
-
-#################################################
-#!Calculate the premiums, insurance fund
-Premium<-0
-AnchInsFund<-matrix(0,ncol=1000,nrow=30)
-PremiumPaidIn<-matrix(0,ncol=1000,nrow=30)
-DividendPaidOut<-matrix(0,ncol=1000,nrow=30)
-#Maximum that the lowest the insurance fund should be after 10 years in operation
-# FundBottom<-0.01
-# #Annual operating costs in millions of EUROs
-# AnualOpCosts<-0
-# #Annual investment interest
-# InvRate<-0.05
-# #Borrowing rate if fund falls below zero
-# BorRate<-0.08
-
-#Determine the 75th percentile of payments by insurance
-MaxPayout<-sort(as.vector(AnchPayment))[30*sims[3]*75/100]   #75% de 30000
-AnchovyPayment<-AnchPayment
-AnchovyPayment[AnchovyPayment[]>MaxPayout]<-MaxPayout
-
-if(MaxPayout>0)
-{
-  while(min(AnchInsFund[11:30,])<FundBottom)
-  {
-    Premium<-Premium+1
-    AnchInsFund<-matrix(0,ncol=sims[3],nrow=30)
-    for( i in 1:sims[3])
-    {
-      for(y in 1:29)
-      {   
-        if(AnchInsFund[y,i]<0)
-        {
-          AnchInsFund[y+1,i]<-AnchInsFund[y,i]*(1+BorRate)+Premium-AnchovyPayment[y,i]-AnualOpCosts
-          PremiumPaidIn[y+1,i]<-Premium
-        }else
-        {
-          if(AnchInsFund[y,i]<2*MaxPayout)
-          {
-            AnchInsFund[y+1,i]<-AnchInsFund[y,i]*(1+InvRate)+Premium-AnchovyPayment[y,i]-AnualOpCosts
-            PremiumPaidIn[y+1,i]<-Premium
-          }else
-          {
-            AnchInsFund[y+1,i]<-AnchInsFund[y,i]-AnchovyPayment[y,i]-AnualOpCosts
-            PremiumPaidIn[y+1,i]<-0
-            DividendPaidOut[y+1,i]<-AnchInsFund[y,i]*InvRate
-          }
-        }         
-      }#end year loop       
-    }#end iteration loop      
-  }#end while loop
-}#end if maxpayout is non-zero
-
-#Reinsurance premium
-ReInsPayment<-AnchPayment-AnchovyPayment
-#Calculate the expected payouts for re-insurance, and add 25% to cover costs and profits   
-ReInsPremium<-mean(apply(ReInsPayment,2,mean))*1.25
-
-#####################################################################################
-#!FUND DEVELOPMENT GRATH
-#windows(7,5)
-#par(mfrow=c(1,1))
-# M<-min(AnchInsFund[11:30,]) 
-# for( i in 1:1000)
-# {
-#   for(y in 1:30)
-#   {     
-#     if (AnchInsFund[y,i]==M) 
-#     {
-#       Y<-y
-#       Iter<-i
-#     }
-#   } 
-# }
-
-# plot(AnchInsFund[,Iter],type="l", lwd=2, main="Insurance Fund", xlab="Years of operation", ylim=c(min(AnchInsFund),2*(MaxPayout+Premium)), ylab="Millions of EUROs", col = "red")
-# lines(AnchInsFund[,1000], col = "purple", lwd=2)
-# lines(AnchInsFund[,50], col="green", lwd=2)
-# lines(AnchInsFund[,150], col="blue", lwd=2)
-# abline(h=2*MaxPayout, col = "black", lty = 2) 
-# legend("bottomright", "Capped fund limit", lty = 2, col="black", bty ="n")
-# legend("topright", paste(sep="", "", Revenue_CL*100,"% CL Revenue policy"),bty ="n")
-##################################################################################### 
-PremiumEHCR<-Premium
-AvePremiumEHCR<-mean(PremiumPaidIn)
-ReInsPremiumEHCR<-ReInsPremium
-#Average yield to compare to premiums
-MeanYieldEHCR<-mean(as.vector(AnchYield[18:48,])*0.23)
-SdYieldEHCR<-sd(as.vector(AnchYield[18:48,])*0.23)
-
-##################################################################################### 
-############ COMPARE HCR AND EHCR         ########################################### 
-##################################################################################### 
-
-HCR<-rbind(PremiumHCR,
-           AvePremiumHCR,
-           ReInsPremiumHCR,
-           MeanYieldHCR,
-           SdYieldHCR,
-           SdYieldHCR*100/MeanYieldHCR,
-           Prob_CC_Reached_Y_HCR*100,
-           Prob_Crash_Y_HCR*100,
-           MeanYieldHCR-AvePremiumHCR-ReInsPremiumHCR)
-
-
-
-EHCR<-rbind(PremiumEHCR,
-            AvePremiumEHCR,            
-            ReInsPremiumEHCR,
-            MeanYieldEHCR,
-            SdYieldEHCR,
-            SdYieldEHCR*100/MeanYieldEHCR,
-            Prob_CC_Reached_Y_EHCR*100,
-            Prob_Crash_Y_EHCR*100,
-            MeanYieldEHCR-AvePremiumEHCR-ReInsPremiumEHCR)
-
-Results<-cbind(HCR,EHCR)
-rownames(Results)<-c("Payment mil euros","Ave Premium mil euros","ReIns Premium mil euros", "Aver Annual Yield in mil of euros","SD Yield","CV %", "Prob CC reached per Year %","Prob of annual stock crash %","difference")
-colnames(Results)<-c("HCR", "EHCR")
-a<-signif(Results/10,2)
-b<-plot(18:48,CatchAnnualHCR[18:48,50]/10^6,type='l', ylab="Yearly simulated catch (millions)", xlab="Year",xaxt='n',xlim=c(18,48), ylim=c(80,1300),col='green', main="Random simulated catches under two regimes")
-lines(18:48,CatchAnnualEHCR[18:48,50]/10^6,type='l',lty=2, col='green')
-axis(1,at=seq(from=18,to=48,by=10),lab=seq(from=0,to=30,by=10))
-for (i in c(1,51,151)){
-  lines(18:47,CatchAnnualHCR[18:47,i]/10^6,col=(i+3))
-  lines(18:47,CatchAnnualEHCR[18:47,i]/10^6, col=(i+3),lty=2)
-}
-legend(20,1200, # places a legend at the appropriate place 
-       c("EHCR","HCR (Constant F)"), # puts text in the legend
-       
-       lty=c(2,1), # gives the legend appropriate symbols (lines)
-       
-       lwd=c(1,1),col=c("black","black")) # gives the legend lines the correct color and width
+    Ingresos<-TAC[,s,]*Precio[,s];
+    
+    #%%%%%%%%%%%%--GASTOS--%%%%%%%%%%%%%
+    
+    Gastos_1<-Ingresos*(ComisionLonja+ComisionCofradia+T4+IVA);#Impuestos
+    
+    Gastos_2<-ConsumoGasoilAnual+ConsumoLubricantesAnual+t(HieloAnual)+t(ComidaAnual)+PorexAnual+AguaPuertoAnual;#Gastos variables como funcion del esfuerzo
+    
+    Gastos_3<-matrix(rep(SS_Anual+RevisionAnual+RevisionSeguridadAnual+MantenimientoArtesAnual,Anyos*Simulacion),nrow=87)+FerreteriaAnual#Gastos fijos anuales
+    
+    #%%%%%%%%%%%%--BALANCE--%%%%%%%%%%%%%
+    
+    Balance[,s,]<-Ingresos-Gastos_1-Gastos_2[((s-1)*Anyos+1):(s*Anyos),]
+    Balance_Total[,s,]<-Ingresos-Gastos_1-Gastos_2[((s-1)*Anyos+1):(s*Anyos),]-t(Gastos_3[,((s-1)*Anyos+1):(s*Anyos)])
+    #Balance_medios[,s,]<-Ingresos-Gastos_1-Gastos_2[((s-1)*Anyos+1):(s*Anyos),]/2
+    Perdidas<-arrayInd(which(Balance[,s,]<0),dim(Balance[, s, ]))
+    NoPerdidas<-arrayInd(which(Balance[,s,]>=0),dim(Balance[, s, ]))
+    
+    colnames(Perdidas)<-c("Año","Barco")
+    
+    #Perdidasdf<-data.frame(Perdidas)
+    #Perdidasdf_1130<-subset(Perdidasdf,Año>10)
+    #Perdidas_barco<-count(Perdidasdf_1130,"Barco")
+    #PerdidasTrabajo<-count(Perdidas_barco,"freq")
+    
+    Armador[Perdidas[,1],s,Perdidas[,2]]<-0.7*(Balance[Perdidas[,1],s,Perdidas[,2]])#-t(Gastos_3[,((s-1)*Anyos+1):(s*Anyos)]))
+    Perdidastotales<-arrayInd(which(Balance_Total[,s,]<0),dim(Balance_Total[, s, ]))
+    PerdidasTrabajo[Perdidastotales[,1],s,Perdidastotales[,2]]<-1 #Año,sim,barco
+    #Responder a la pregunta, en cuántas simulaciones el barco tiene tres años seguidos de pérdidas
+    
+    Armador[NoPerdidas[,1],s,NoPerdidas[,2]]<-0.35*(Balance[NoPerdidas[,1],s,NoPerdidas[,2]])  #.7*Balance/2                                  
+    #PerdidasTrabajo[NoPerdidas[,1],s,NoPerdidas[,2]]<-0
+    
+    
+    
+    Armador[,s,]<-Armador[,s,]-t(Gastos_3[,((s-1)*Anyos+1):(s*Anyos)])
+    #for barco=1:length(Esloras)
+    
+    # if (Ingresos(barco)-Gastos_1(barco)-Gastos_2(barco)<0)
+    #   
+    #   Armador(barco,year, s)<-0.7*((Ingresos(barco)-Gastos_1(barco)-Gastos_2(barco)))-Gastos_3(barco);#Las pérdidas se las come entera con patatas
+    # 
+    # Perdidas(barco,year, s)<-1;
+    # 
+    # else
+    #   
+    #   Armador(barco,year, s)<-0.7*((Ingresos(barco)-Gastos_1(barco)-Gastos_2(barco))/2)-Gastos_3(barco);
+    # 
+    # end
+    # 
+    # end
+    
+    #Trabajadores(:,year, s)<-(Ingresos-Gastos_1-Gastos_2)/2;
+    Trabajadores[,s,]<-Balance[,s,]/2
+    
+  }#end Simulacion
+  
+  PerdidasTrabajodf<-adply(PerdidasTrabajo[(Anyos-19):Anyos,1:Simulacion,],1:3)#100 para acelerar el cáclculo
+  PerdidasTrabajodfnoNA<-na.omit(PerdidasTrabajodf)
+  perdidasbyship<-split(PerdidasTrabajodfnoNA,PerdidasTrabajodfnoNA$X3)
+  
+  for (i in 1:length(Esloras)){
+    perdidasbyship_reales<-split(perdidasbyship[[i]],PERD)
+    prob2perdu<-which(diff(as.numeric(perdidasbyship_reales[[2]]$X1))==1 & diff(as.numeric(perdidasbyship_reales[[2]]$X2))==0)
+    prob2perd[i]<-length(unique(perdidasbyship_reales[[2]]$X2[prob2perdu]))
+  }#prob2perd es el número de simulaciones en las cuales se experimentan dos años seguidos de pérdidas al menos una vez
+ prob2perdporc<-prob2perd*100/Simulacion
+  Provisional<-Armador[11:30,,]
+  #Provisional=reshape(Armador(:,11:30,1:Simulacion),87,[])';
+  
+  GananciaPromedio<-apply(Provisional,3,mean)*1e-3
+  #GananciaPromedio=mean(Provisional)'*1e-3;
+  
+  #GananciaSD=std(Provisional)'*1e-3;
+  GananciaSD<-apply(Provisional,3,sd)*1e-3
+  collapseprob<-length(unique(which(SpawningBiomass[11:30,6,]*1e-9<1)%/%20))/Simulacion
+  Tripulantesenriesgo<-sum(Tripulantes[which(prob2perdporc>50)])
+  Results<-cbind(Esloras,Tripulantes,GananciaPromedio,GananciaSD,prob2perdporc)
+  Results2<-cbind(collapseprob, Tripulantesenriesgo)
+colnames(Results)<-c("Longitud barco (m)", "Número de tripulantes",  "Ganancia media anual", "Ganancia SD anual","Prob de 2 años seguidos de pérdidas (%)")
+colnames(Results2)<-c("Probabilidad de colapso","Trabajadores en riesgo")
+ a<-Results
+b<-Results2
 list(a=a,b=b)
-
-
-# data.frame(
-#   Name = c( "F"),#),
-#   #"Decimal"),
-#   #"Range",
-#   #"Custom Format",
-#   #"Animation"),
-#   Value = as.character(c(FishMortTarget*CatchHalfAnnualHCR[7,1]*Premium)),#, 
-#   # input$decimal
-#   #paste(input$range, collapse=' '),
-#   #input$format,
-#   #input$animation
-#   #)), 
-#   stringsAsFactors=FALSE)
-
- 
- 
- 
-  
 })
   
+#   Results<-cbind(HCR,EHCR)
+#   rownames(Results)<-c("Payment mil euros","Ave Premium mil euros","ReIns Premium mil euros", "Aver Annual Yield in mil of euros","SD Yield","CV %", "Prob CC reached per Year %","Prob of annual stock crash %","difference")
+#   colnames(Results)<-c("HCR", "EHCR")
+#   a<-signif(Results/10,2)
+#   b<-plot(18:48,CatchAnnualHCR[18:48,50]/10^6,type='l', ylab="Yearly simulated catch (millions)", xlab="Year",xaxt='n',xlim=c(18,48), ylim=c(80,1300),col='green', main="Random simulated catches under two regimes")
+#   lines(18:48,CatchAnnualEHCR[18:48,50]/10^6,type='l',lty=2, col='green')
+#   axis(1,at=seq(from=18,to=48,by=10),lab=seq(from=0,to=30,by=10))
+#   for (i in c(1,51,151)){
+#     lines(18:47,CatchAnnualHCR[18:47,i]/10^6,col=(i+3))
+#     lines(18:47,CatchAnnualEHCR[18:47,i]/10^6, col=(i+3),lty=2)
+#   }
+#   legend(20,1200, # places a legend at the appropriate place 
+#          c("EHCR","HCR (Constant F)"), # puts text in the legend
+#          
+#          lty=c(2,1), # gives the legend appropriate symbols (lines)
+#          
+#          lwd=c(1,1),col=c("black","black")) # gives the legend lines the correct color and width
+#   list(a=a,b=b)
+#   
+#   
+#   # data.frame(
+#   #   Name = c( "F"),#),
+#   #   #"Decimal"),
+#   #   #"Range",
+#   #   #"Custom Format",
+#   #   #"Animation"),
+#   #   Value = as.character(c(FishMortTarget*CatchHalfAnnualHCR[7,1]*Premium)),#, 
+#   #   # input$decimal
+#   #   #paste(input$range, collapse=' '),
+#   #   #input$format,
+#   #   #input$animation
+#   #   #)), 
+#   #   stringsAsFactors=FALSE)
+#   
+#   
+#   
+#   
+#   
+# })
+# 
 
-  
-  
-output$plot3 <- renderPlot({
-  strategy()$b
-}) 
-  
-output$values2 <- renderTable({
+
+
+output$values <- renderTable({
   strategy()$a
-})  
+}) 
+
+output$values2 <- renderTable({
+  strategy()$b
+  }) 
   
+  
+  
+  
+  
+  
+  
+  
+ 
+
+
+
+
+
+
+
+
 })
-
-
-
-
-
-
-
-
-
-
-#})
   
   
  
