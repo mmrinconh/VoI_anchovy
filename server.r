@@ -149,7 +149,7 @@ Ferreteria<-10+(20/15)*(Esloras-10);#Gastos diarios de ferreteria
 
 #Valores de iniciacion
 
-Perdidas<-array(0,dim=c(length(Esloras), Anyos, Simulacion));
+#Perdidas<-array(0,dim=c(length(Esloras), Anyos, Simulacion));
 
 
 
@@ -172,6 +172,8 @@ Armador<-TAC
 Trabajadores<-Balance
 #Perdidas_barco<-array(NA, dim=c(length(Esloras),2,Simulacion))
 PerdidasTrabajo<-array(0, dim=c(Anyos,Simulacion,length(Esloras)))#Será 1 si hay pérdidas o 0 en caso contrario
+Perdidastotales<-PerdidasTrabajo
+Perdidas<-PerdidasTrabajo
 Catchesbio<-Catches
 Catchesnum<-Catches
 
@@ -309,6 +311,8 @@ strategy<-reactive({
   tac<-tac()
   TAC_Adaptativa_def<-matrix(tac*1000000, nrow=Anyos, ncol=Simulacion)
   for (s in 1:Simulacion){
+    
+    
     for (year in 2:Anyos){
       
       Suma_1<-0
@@ -411,27 +415,31 @@ strategy<-reactive({
     Balance[,s,]<-Ingresos-Gastos_1-Gastos_2[((s-1)*Anyos+1):(s*Anyos),]
     Balance_Total[,s,]<-Ingresos-Gastos_1-Gastos_2[((s-1)*Anyos+1):(s*Anyos),]-t(Gastos_3[,((s-1)*Anyos+1):(s*Anyos)])
     #Balance_medios[,s,]<-Ingresos-Gastos_1-Gastos_2[((s-1)*Anyos+1):(s*Anyos),]/2
-    Perdidas<-arrayInd(which(Balance[,s,]<0),dim(Balance[, s, ]))
-    NoPerdidas<-arrayInd(which(Balance[,s,]>=0),dim(Balance[, s, ]))
-    
-    colnames(Perdidas)<-c("Año","Barco")
-    
-    #Perdidasdf<-data.frame(Perdidas)
+   # Perdidas<-arrayInd(which(Balance[,s,]<0),dim(Balance[, s, ]))
+    #NoPerdidas<-arrayInd(which(Balance[,s,]>=0),dim(Balance[, s, ]))
+    Armador[,s,]<-(Balance[,s,]<0)*0.7*Balance[,s,]+(Balance[,s,]>=0)*0.35*Balance[,s,]
+    #colnames(Perdidastotales)<-c("Año","Barco")
+   Perdidas[,s,]<-1*(Balance[,s,]<0)
+   Perdidastotales[,s,]<-1*(Balance_Total[,s,]<0)
+    #Perdidasdf<-data.frame(Perdidastotales)
     #Perdidasdf_1130<-subset(Perdidasdf,Año>10)
     #Perdidas_barco<-count(Perdidasdf_1130,"Barco")
     #PerdidasTrabajo<-count(Perdidas_barco,"freq")
     
-    Armador[Perdidas[,1],s,Perdidas[,2]]<-0.7*(Balance[Perdidas[,1],s,Perdidas[,2]])#-t(Gastos_3[,((s-1)*Anyos+1):(s*Anyos)]))
-    Perdidastotales<-arrayInd(which(Balance_Total[,s,]<0),dim(Balance_Total[, s, ]))
-    PerdidasTrabajo[Perdidastotales[,1],s,Perdidastotales[,2]]<-1 #Año,sim,barco
+   # Armador[Perdidas[,1],s,Perdidas[,2]]<-0.7*(Balance[Perdidas[,1],s,Perdidas[,2]])#-t(Gastos_3[,((s-1)*Anyos+1):(s*Anyos)]))
+    #Perdidastotales<-arrayInd(which(Balance_Total[,s,]<0),dim(Balance_Total[, s, ]))
+     #Año,sim,barco
     #Responder a la pregunta, en cuántas simulaciones el barco tiene tres años seguidos de pérdidas
     
-    Armador[NoPerdidas[,1],s,NoPerdidas[,2]]<-0.35*(Balance[NoPerdidas[,1],s,NoPerdidas[,2]])  #.7*Balance/2                                  
+    #Armador[NoPerdidas[,1],s,NoPerdidas[,2]]<-0.35*(Balance[NoPerdidas[,1],s,NoPerdidas[,2]])  #.7*Balance/2                                  
     #PerdidasTrabajo[NoPerdidas[,1],s,NoPerdidas[,2]]<-0
     
-    
-    
-    Armador[,s,]<-Armador[,s,]-t(Gastos_3[,((s-1)*Anyos+1):(s*Anyos)])
+    ################################################3
+    #Despertar para agregar Gastos_3
+    #Armador[,s,]<-Armador[,s,]-t(Gastos_3[,((s-1)*Anyos+1):(s*Anyos)])
+   
+   
+   
     #for barco=1:length(Esloras)
     
     # if (Ingresos(barco)-Gastos_1(barco)-Gastos_2(barco)<0)
@@ -452,18 +460,29 @@ strategy<-reactive({
     Trabajadores[,s,]<-Balance[,s,]/2
     
   }#end Simulacion
-  
+  PerdidasTrabajo<-Perdidas#Perdidastotales despertar para agregar gastos 3
   PerdidasTrabajodf<-adply(PerdidasTrabajo[(Anyos-19):Anyos,1:Simulacion,],1:3)#100 para acelerar el cáclculo
   PerdidasTrabajodfnoNA<-na.omit(PerdidasTrabajodf)
   perdidasbyship<-split(PerdidasTrabajodfnoNA,PerdidasTrabajodfnoNA$X3)
   
   for (i in 1:length(Esloras)){
-    perdidasbyship_reales<-split(perdidasbyship[[i]],PERD)
+    if(sum(unique(sort(perdidasbyship[[i]]$V1))-c(0,1))==0){
+    perdidasbyship_reales<-split(perdidasbyship[[i]],perdidasbyship[[i]]$V1)
+    #separa sólo pérdidas=1 por barco
+    
     prob2perdu<-which(diff(as.numeric(perdidasbyship_reales[[2]]$X1))==1 & diff(as.numeric(perdidasbyship_reales[[2]]$X2))==0)
-    prob2perd[i]<-length(unique(perdidasbyship_reales[[2]]$X2[prob2perdu]))
+    #Busca años consecutivos de pérdidas en una simulación
+    prob2perd[i]<-length(unique(perdidasbyship_reales[[2]]$X2[prob2perdu])) #Elimina casos en los que se producen 2 años seguidos de pérdida varias veces en la misma simulación, sólo cuenta 1
   }#prob2perd es el número de simulaciones en las cuales se experimentan dos años seguidos de pérdidas al menos una vez
- prob2perdporc<-prob2perd*100/Simulacion
-  Provisional<-Armador[11:30,,]
+  else
+  {
+   
+    prob2perd[i]<-perdidasbyship[[i]]$V1[1]*Simulacion
+  }
+  }
+
+ prob2perdporc<-signif(prob2perd*100/Simulacion,2)# En porcentaje
+  Provisional<-na.omit(Armador[11:30,,])
   #Provisional=reshape(Armador(:,11:30,1:Simulacion),87,[])';
   
   GananciaPromedio<-apply(Provisional,3,mean)*1e-3
@@ -471,12 +490,13 @@ strategy<-reactive({
   
   #GananciaSD=std(Provisional)'*1e-3;
   GananciaSD<-apply(Provisional,3,sd)*1e-3
-  collapseprob<-length(unique(which(SpawningBiomass[11:30,6,]*1e-9<1)%/%20))/Simulacion
+  collapseprob<-length(unique(which(SpawningBiomass[11:30,6,]*1e-9<0.5)%/%20))/Simulacion
   Tripulantesenriesgo<-sum(Tripulantes[which(prob2perdporc>50)])
-  Results<-cbind(Esloras,Tripulantes,GananciaPromedio,GananciaSD,prob2perdporc)
-  Results2<-cbind(collapseprob, Tripulantesenriesgo)
+ Tripulantesenriesgoporc<-sum(Tripulantes[which(prob2perdporc>50)])*100/sum(Tripulantes)
+  Results<-cbind(Esloras,Tripulantes,signif(GananciaPromedio,2),signif(GananciaSD,2),prob2perdporc)
+  Results2<-cbind(collapseprob, Tripulantesenriesgoporc, mean(GananciaPromedio), sd(as.vector(Provisional)*1e-3))
 colnames(Results)<-c("Longitud barco (m)", "Número de tripulantes",  "Ganancia media anual", "Ganancia SD anual","Prob de 2 años seguidos de pérdidas (%)")
-colnames(Results2)<-c("Probabilidad de colapso","Trabajadores en riesgo")
+colnames(Results2)<-c("Probabilidad de colapso (entre 0 y 1)","Trabajadores en riesgo (%), tripulantes de barcos con prob. de 2 años seguidos de pérdidas>50%","Ganancia media", "Ganancia sd")
  a<-Results
 b<-Results2
 list(a=a,b=b)
