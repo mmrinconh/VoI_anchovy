@@ -173,6 +173,7 @@ Trabajadores<-Balance
 #Perdidas_barco<-array(NA, dim=c(length(Esloras),2,Simulacion))
 PerdidasTrabajo<-array(0, dim=c(Anyos,Simulacion,length(Esloras)))#Será 1 si hay pérdidas o 0 en caso contrario
 Perdidastotales<-PerdidasTrabajo
+Perdidas_armador<-PerdidasTrabajo
 Perdidas<-PerdidasTrabajo
 Catchesbio<-Catches
 Catchesnum<-Catches
@@ -408,7 +409,7 @@ strategy<-reactive({
     
     Gastos_2<-ConsumoGasoilAnual+ConsumoLubricantesAnual+t(HieloAnual)+t(ComidaAnual)+PorexAnual+AguaPuertoAnual+t(FerreteriaAnual);#Gastos variables como funcion del esfuerzo
     
-    Gastos_3<-matrix(rep(SS_Anual+RevisionAnual+RevisionSeguridadAnual+MantenimientoArtesAnual,Anyos*Simulacion),nrow=87)+FerreteriaAnual#Gastos fijos anuales
+    Gastos_3<-matrix(rep(SS_Anual+RevisionAnual+RevisionSeguridadAnual+MantenimientoArtesAnual,Anyos*Simulacion),nrow=87)#+FerreteriaAnual#Gastos fijos anuales
     
     #%%%%%%%%%%%%--BALANCE--%%%%%%%%%%%%%
     
@@ -417,10 +418,13 @@ strategy<-reactive({
     #Balance_medios[,s,]<-Ingresos-Gastos_1-Gastos_2[((s-1)*Anyos+1):(s*Anyos),]/2
    # Perdidas<-arrayInd(which(Balance[,s,]<0),dim(Balance[, s, ]))
     #NoPerdidas<-arrayInd(which(Balance[,s,]>=0),dim(Balance[, s, ]))
-    Armador[,s,]<-(Balance[,s,]<0)*0.7*Balance[,s,]+(Balance[,s,]>=0)*0.35*Balance[,s,]
+    Armador[,s,]<-(Balance[,s,]<0)*0.7*Balance[,s,]+(Balance[,s,]>=0)*0.35*Balance[,s,]-t(Gastos_3[,((s-1)*Anyos+1):(s*Anyos)])
+  # Armador[,s,]<-Armador[,s,]-t(Gastos_3[,((s-1)*Anyos+1):(s*Anyos)])
     #colnames(Perdidastotales)<-c("Año","Barco")
-   Perdidas[,s,]<-1*(Balance[,s,]<0)
+  # Perdidas[,s,]<-1*(Balance[,s,]<0)
+  Perdidas[,s,]<-1*(Balance[,s,]<0)
    Perdidastotales[,s,]<-1*(Balance_Total[,s,]<0)
+  Perdidas_armador[,s,]<-1*(Armador[,s,]<0)
     #Perdidasdf<-data.frame(Perdidastotales)
     #Perdidasdf_1130<-subset(Perdidasdf,Año>10)
     #Perdidas_barco<-count(Perdidasdf_1130,"Barco")
@@ -460,7 +464,7 @@ strategy<-reactive({
     Trabajadores[,s,]<-Balance[,s,]/2
     
   }#end Simulacion
-  PerdidasTrabajo<-Perdidas#Perdidastotales despertar para agregar gastos 3
+  PerdidasTrabajo<-Perdidas_armador#Perdidas#Perdidastotales despertar para agregar gastos 3
   PerdidasTrabajodf<-adply(PerdidasTrabajo[(Anyos-19):Anyos,1:Simulacion,],1:3)#100 para acelerar el cáclculo
   PerdidasTrabajodfnoNA<-na.omit(PerdidasTrabajodf)
   perdidasbyship<-split(PerdidasTrabajodfnoNA,PerdidasTrabajodfnoNA$X3)
