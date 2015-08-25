@@ -406,7 +406,7 @@ strategy<-reactive({
     
     Gastos_1<-Ingresos*(ComisionLonja+ComisionCofradia+T4+IVA);#Impuestos
     
-    Gastos_2<-ConsumoGasoilAnual+ConsumoLubricantesAnual+t(HieloAnual)+t(ComidaAnual)+PorexAnual+AguaPuertoAnual;#Gastos variables como funcion del esfuerzo
+    Gastos_2<-ConsumoGasoilAnual+ConsumoLubricantesAnual+t(HieloAnual)+t(ComidaAnual)+PorexAnual+AguaPuertoAnual+t(FerreteriaAnual);#Gastos variables como funcion del esfuerzo
     
     Gastos_3<-matrix(rep(SS_Anual+RevisionAnual+RevisionSeguridadAnual+MantenimientoArtesAnual,Anyos*Simulacion),nrow=87)+FerreteriaAnual#Gastos fijos anuales
     
